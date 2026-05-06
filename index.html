@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sequoia Vegetation Slider</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background: #f5f5f5;
+      text-align: center;
+    }
+
+    svg {
+      background: white;
+      border: 1px solid #ccc;
+    }
+
+    #controls {
+      margin: 20px;
+    }
+
+    #dateLabel {
+      font-size: 20px;
+      font-weight: bold;
+      margin-left: 15px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Seasonal Vegetation Change in Sequoia National Park</h1>
+
+  <div id="controls">
+    <input type="range" id="slider" min="0" max="10" step="1" value="0">
+    <span id="dateLabel"></span>
+  </div>
+
+  <svg id="viz" width="900" height="600"></svg>
+
+  <script>
+    const frames = [
+      { label: "Jan 7, 2025", file: "images/sequoia_jan7_2025.png" },
+      { label: "Feb 9, 2025", file: "images/sequoia_feb_9_2025.png" },
+      { label: "Apr 9, 2025", file: "images/sequoia_apr9_2025.png" },
+      { label: "May 9, 2025", file: "images/sequoia_may9_2025.png" },
+      { label: "Jun 9, 2025", file: "images/sequoia_jun9_2025.png" },
+      { label: "Jul 9, 2025", file: "images/sequoia_jul9_2025.png" },
+      { label: "Aug 9, 2025", file: "images/sequoia_aug9_2025.png" },
+      { label: "Sep 9, 2025", file: "images/sequoia_sep9_2025.png" },
+      { label: "Oct 9, 2025", file: "images/sequoia_oct9_2025.png" },
+      { label: "Nov 11, 2025", file: "images/sequoia_nov11_2025.png" },
+      { label: "Dec 9, 2025", file: "images/sequoia_dec9_2025.png" }
+    ];
+
+    const svg = d3.select("#viz");
+    const width = +svg.attr("width");
+    const height = +svg.attr("height");
+
+    const image = svg.append("image")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("width", width)
+      .attr("height", height)
+      .attr("preserveAspectRatio", "xMidYMid meet");
+
+    const caption = svg.append("text")
+      .attr("x", 30)
+      .attr("y", 40)
+      .attr("font-size", 22)
+      .attr("font-weight", "bold")
+      .attr("fill", "white")
+      .attr("stroke", "black")
+      .attr("paint-order", "stroke");
+
+    function updateFrame(i) {
+      const frame = frames[i];
+
+      image
+        .transition()
+        .duration(300)
+        .attr("href", frame.file);
+
+      caption.text(frame.label);
+
+      d3.select("#dateLabel").text(frame.label);
+    }
+
+    d3.select("#slider")
+      .attr("max", frames.length - 1)
+      .on("input", function () {
+        updateFrame(+this.value);
+      });
+
+    updateFrame(0);
+  </script>
+</body>
+</html>
