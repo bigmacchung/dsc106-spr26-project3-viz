@@ -1,6 +1,6 @@
 # Trends in California Vegetation Over Time
 
-DSC 106 · Project 3 · Final · Maxime Chung 
+DSC 106 · Project 3
 Repo: <https://github.com/bigmacchung/dsc106-spr26-project3-viz>
 
 **Question:** *How does California's vegetation visually change across seasons — and how much does it change between a wet year and a dry year?*
