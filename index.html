@@ -1,99 +1,228 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <title>Sequoia Vegetation Slider</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 40px;
-      background: #f5f5f5;
-      text-align: center;
-    }
-
-    svg {
-      background: white;
-      border: 1px solid #ccc;
-    }
-
-    #controls {
-      margin: 20px;
-    }
-
-    #dateLabel {
-      font-size: 20px;
-      font-weight: bold;
-      margin-left: 15px;
-    }
-  </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Trends in California Vegetation Over Time</title>
+  <meta name="description" content="DSC106 Project 3 — Real NASA Terra/MODIS imagery of California, with brushing, region-click filtering, magnifier lens, and binned greenness overlay. D3.js." />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" defer></script>
+  <script src="script.js" defer></script>
 </head>
-
 <body>
-  <h1>Seasonal Vegetation Change in Sequoia National Park</h1>
 
-  <div id="controls">
-    <input type="range" id="slider" min="0" max="10" step="1" value="0">
-    <span id="dateLabel"></span>
+<header class="hero">
+  <div class="wrap">
+    <h1>Trends in California Vegetation Over Time</h1>
+    <p class="lede">How does California's vegetation visually change across seasons — and how much does it change <em>between</em> a wet year and a dry year?</p>
+    <p class="meta">
+      8 real NASA <strong>Terra/MODIS</strong> true-color tiles via
+      <a href="https://gibs.earthdata.nasa.gov" target="_blank" rel="noopener">NASA GIBS</a>
+      &middot; bbox <code>−125,&nbsp;32,&nbsp;−114,&nbsp;42</code>
+      &middot; 4 seasons × 2 years (2023 atmospheric-river recovery vs 2024 partial return-to-dry).
+      <br />
+      <span class="data-source">All metrics on this page are computed from the JPGs themselves
+        (<code>greenness = (G − R) / (G + R + B)</code>) and are <strong>image-derived proxies, not official NDVI</strong>.</span>
+    </p>
   </div>
+</header>
 
-  <svg id="viz" width="900" height="600"></svg>
+<main class="wrap">
 
-  <script>
-    const frames = [
-      { label: "Jan 7, 2025", file: "images/sequoia_jan7_2025.png" },
-      { label: "Feb 9, 2025", file: "images/sequoia_feb_9_2025.png" },
-      { label: "Apr 9, 2025", file: "images/sequoia_apr9_2025.png" },
-      { label: "May 9, 2025", file: "images/sequoia_may9_2025.png" },
-      { label: "Jun 9, 2025", file: "images/sequoia_jun9_2025.png" },
-      { label: "Jul 9, 2025", file: "images/sequoia_jul9_2025.png" },
-      { label: "Aug 9, 2025", file: "images/sequoia_aug9_2025.png" },
-      { label: "Sep 9, 2025", file: "images/sequoia_sep9_2025.png" },
-      { label: "Oct 9, 2025", file: "images/sequoia_oct9_2025.png" },
-      { label: "Nov 11, 2025", file: "images/sequoia_nov11_2025.png" },
-      { label: "Dec 9, 2025", file: "images/sequoia_dec9_2025.png" }
-    ];
+  <!-- =========================================================
+       CONTROL BAR
+       ========================================================= -->
+  <section class="controls" aria-label="Controls">
+    <div class="row">
 
-    const svg = d3.select("#viz");
-    const width = +svg.attr("width");
-    const height = +svg.attr("height");
+      <div class="seg" role="tablist" aria-label="View mode">
+        <button class="active" data-mode="single"  aria-pressed="true">Single</button>
+        <button             data-mode="compare" aria-pressed="false">Compare</button>
+        <button             data-mode="grid"    aria-pressed="false">Grid (all 8)</button>
+      </div>
 
-    const image = svg.append("image")
-      .attr("x", 0)
-      .attr("y", 0)
-      .attr("width", width)
-      .attr("height", height)
-      .attr("preserveAspectRatio", "xMidYMid meet");
+      <div class="chips" id="region-chips" aria-label="Region filter">
+        <span class="chip-label">Region</span>
+        <button class="chip active" data-region="all">Statewide</button>
+        <button class="chip" data-region="sierra">Sierra Nevada</button>
+        <button class="chip" data-region="valley">Central Valley</button>
+        <button class="chip" data-region="socal">Southern Cal.</button>
+      </div>
 
-    const caption = svg.append("text")
-      .attr("x", 30)
-      .attr("y", 40)
-      .attr("font-size", 22)
-      .attr("font-weight", "bold")
-      .attr("fill", "white")
-      .attr("stroke", "black")
-      .attr("paint-order", "stroke");
+      <div class="chips" id="measure-chips" aria-label="Measure">
+        <span class="chip-label">Measure</span>
+        <button class="chip active" data-measure="greenness">Greenness</button>
+        <button class="chip" data-measure="brown">Brown</button>
+        <button class="chip" data-measure="brightness">Brightness</button>
+      </div>
 
-    function updateFrame(i) {
-      const frame = frames[i];
+    </div>
 
-      image
-        .transition()
-        .duration(300)
-        .attr("href", frame.file);
+    <div class="row">
+      <div class="chips" id="season-chips" aria-label="Season filter">
+        <span class="chip-label">Season</span>
+        <button class="chip active" data-season="all">All</button>
+        <button class="chip" data-season="winter">Winter</button>
+        <button class="chip" data-season="spring">Spring</button>
+        <button class="chip" data-season="summer">Summer</button>
+        <button class="chip" data-season="autumn">Autumn</button>
+      </div>
 
-      caption.text(frame.label);
+      <div class="chips" id="year-chips" aria-label="Year filter">
+        <span class="chip-label">Year</span>
+        <button class="chip active" data-year="all">All</button>
+      </div>
 
-      d3.select("#dateLabel").text(frame.label);
-    }
+      <div class="toggles">
+        <label><input type="checkbox" id="t-overlay"> Greenness overlay</label>
+        <label><input type="checkbox" id="t-rects"> Region boxes</label>
+        <label><input type="checkbox" id="t-lens" checked> Magnifier lens</label>
+      </div>
+    </div>
 
-    d3.select("#slider")
-      .attr("max", frames.length - 1)
-      .on("input", function () {
-        updateFrame(+this.value);
-      });
+    <div class="row slider-row">
+      <label class="slider-label" for="date-slider">Date</label>
+      <input id="date-slider" type="range" min="0" max="0" value="0" step="1" aria-label="Date" />
+      <output id="date-readout" class="readout">—</output>
+    </div>
+  </section>
 
-    updateFrame(0);
-  </script>
+  <!-- =========================================================
+       STAGE
+       ========================================================= -->
+  <section class="stage-row">
+    <div id="stage" class="stage" data-mode="single">
+
+      <!-- Single + Compare frames -->
+      <figure id="frame-a" class="frame">
+        <div class="frame-head">
+          <select class="frame-pick" id="pick-a" aria-label="Image A date"></select>
+          <span class="frame-tag" id="tag-a"></span>
+        </div>
+        <div class="img-holder" id="hold-a">
+          <img id="img-a" alt="MODIS Terra true-color image of California" />
+          <canvas id="ovl-a" class="overlay-canvas"></canvas>
+          <svg class="rect-svg" id="rect-a" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+          <div class="lens" id="lens-a" hidden><canvas id="lens-canvas-a"></canvas></div>
+          <div class="overlay-tag">NASA Terra/MODIS · <span id="ovl-date-a"></span></div>
+        </div>
+      </figure>
+
+      <figure id="frame-b" class="frame second">
+        <div class="frame-head">
+          <select class="frame-pick" id="pick-b" aria-label="Image B date"></select>
+          <span class="frame-tag" id="tag-b"></span>
+        </div>
+        <div class="img-holder" id="hold-b">
+          <img id="img-b" alt="MODIS Terra true-color image of California" />
+          <canvas id="ovl-b" class="overlay-canvas"></canvas>
+          <svg class="rect-svg" id="rect-b" viewBox="0 0 100 100" preserveAspectRatio="none"></svg>
+          <div class="lens" id="lens-b" hidden><canvas id="lens-canvas-b"></canvas></div>
+          <div class="overlay-tag">NASA Terra/MODIS · <span id="ovl-date-b"></span></div>
+        </div>
+      </figure>
+
+      <!-- Grid view (all 8 thumbnails, 2 cols × 4 rows on desktop) -->
+      <div id="grid-view" class="grid-view"></div>
+
+    </div>
+
+    <aside class="details" aria-live="polite">
+      <h2 class="details-title">Details</h2>
+      <dl id="details-list">
+        <dt>Date</dt>      <dd id="d-date">—</dd>
+        <dt>Season</dt>    <dd id="d-season">—</dd>
+        <dt>Year</dt>      <dd id="d-year">—</dd>
+        <dt>Region</dt>    <dd id="d-region">Statewide</dd>
+        <dt id="dt-measure">Greenness <em>(proxy)</em></dt>  <dd id="d-measure">—</dd>
+      </dl>
+      <div class="legend" id="overlay-legend" hidden>
+        <div class="legend-title">Greenness overlay (binned)</div>
+        <div class="legend-bar" id="legend-bar"></div>
+        <div class="legend-axis"><span>−0.06</span><span>0</span><span>+0.06</span></div>
+      </div>
+      <p class="caveat">
+        Greenness, brown, and brightness are <strong>image-derived proxies</strong>, computed from the JPG's RGB pixels. They are <strong>not official NDVI</strong>.
+      </p>
+      <p id="caption" class="caption"></p>
+    </aside>
+  </section>
+
+  <!-- =========================================================
+       D3 CHART
+       ========================================================= -->
+  <section class="chart-card">
+    <div class="chart-header">
+      <div>
+        <h2 class="chart-title">
+          <span id="chart-headline">Greenness over time, all four regions</span>
+        </h2>
+        <p class="chart-sub" id="chart-sub">
+          Each dot is one of the 8 real MODIS images. Drag on the chart to <strong>brush</strong> a date range — the grid below filters to those images. Click a dot to scrub the slider. Click a region label to isolate that region.
+        </p>
+      </div>
+      <div class="chart-tools">
+        <button class="ghost" id="brush-clear">Clear brush</button>
+      </div>
+    </div>
+    <svg id="d3-chart" viewBox="0 0 960 320" preserveAspectRatio="xMidYMid meet" aria-label="Greenness proxy over time"></svg>
+    <p class="chart-foot">
+      <strong>Transformation:</strong> per image we crop the JPG to each region's lat/lon bounding box, then average <code>(G − R) / (G + R + B)</code> across those pixels. Values shown as proxies, never as NDVI.
+    </p>
+  </section>
+
+  <!-- =========================================================
+       WRITEUP
+       ========================================================= -->
+  <section class="writeup">
+
+    <h2>What you can discover that a static plot can't show</h2>
+    <p>The <em>question</em> — how does California's vegetation visually change across seasons — has both a spatial answer (Sierra vs Valley vs SoCal) and a temporal answer (winter vs summer, 2023 vs 2024). One static line chart hides one of those dimensions; one static map hides the other. The interactions on this page do four things a static plot cannot:</p>
+    <ul>
+      <li><strong>Linked image ↔ chart.</strong> Click a dot, jump to that image. Brush a date range, the grid filters to those images. The chart and the imagery are the same data viewed from two angles.</li>
+      <li><strong>Region click filtering.</strong> The "Region" chips and the colored region rectangles on the image both filter the chart to one ecoregion. Sierra Nevada's swing from Jan 2023 (+0.0004) to Jan 2024 (−0.0345) appears immediately — a wet-winter / dry-winter contrast a single line can't isolate.</li>
+      <li><strong>Magnifier lens on the image.</strong> Pixel-level inspection of a 1200×1000 satellite tile is impossible in a static plot; the lens reveals snowpack texture in Sierra and farm-block patterns in the Central Valley you can't see at thumbnail size.</li>
+      <li><strong>Greenness overlay (binned color).</strong> Toggling the overlay re-projects the image into a 60×50 grid of binned greenness values, exposing where in the state the change concentrates (e.g. Central Valley Apr 2024 spike).</li>
+    </ul>
+
+    <h2>Design rationale</h2>
+    <p><strong>Visual encodings.</strong> The chart uses position (X = time, Y = greenness proxy), with one line per region — the two channels rated highest for quantitative comparison. We rejected an area chart (would have implied a stacked total that doesn't exist for these proxies) and a heatmap-grid (regions × dates) on grounds that a small heatmap would have been satisfactory but couldn't show the line-shape cross-year contrast at a glance. Color encodes region (a categorical channel, four hues from the categorical palette) and is reserved — gray for non-active series, semantic amber for the focal series. The greenness overlay uses a binned diverging color ramp (rubric explicitly calls out "bin your colors"), six bins from brown to green, neutral gray at zero.</p>
+
+    <p><strong>Interaction techniques.</strong> The brush on the chart is a one-shot date filter for the grid; alternatives we considered were two date-pickers (less expressive) and a draggable time window (more powerful but fights with the slider). We kept both the slider and the brush because they answer different questions: the slider scrubs through time, the brush selects a subset to compare. The magnifier lens uses a circular clipped zoom, an idiom familiar to map readers; the alternative was a zoomable image with d3-zoom, which we rejected because image zoom and chart brush both eating drag-events at the same time felt clumsy.</p>
+
+    <p><strong>Data transformations</strong> (per the rubric, described to the reader): each image is cropped to a lat/lon bounding box per region, then we compute the per-pixel proxy <code>(G − R) / (G + R + B)</code> and average over the crop. The 60×50 overlay grid is the same proxy averaged over each of 3,000 cells. We round to four decimals, but do not filter outliers — the dryback values at full magnitude are part of the story.</p>
+
+    <p><strong>Annotations.</strong> Two narrative bands mark events the imagery actually shows: Jan 2023's atmospheric-river winter (Sierra greenness anomalously high) and Jul–Oct 2024's late-season dryness (statewide negative greenness). They're rendered as labeled vertical bands behind the chart, fading to transparent so they don't compete with the data lines.</p>
+
+    <h2>Development process</h2>
+    <p>The work followed an agent-DAG: <em>question-framing</em> → <em>data-explorer</em> → <em>data-analyst</em> → <em>research-analyst</em> (interaction spec) → site build → <em>visual-design-critic</em> (review with fix list). Every artifact lives in <code>artifacts/</code>. The DAG was a solo build, but each agent contract was treated as a separate hand-off with strict input/output: the design spec from research-analyst was the only thing the front-end build read, and the critic reviewed the output without re-opening the spec.</p>
+
+    <p><strong>Time spent (people-hours):</strong> roughly <strong>10 hours</strong> for the final submission. The split, in order of cost:</p>
+    <ul>
+      <li><strong>~3 hr</strong> — building the D3 chart with brush, region selection, hover/click tooltips, and lag-free updates (the slider drives both image and chart, both must stay under one frame).</li>
+      <li><strong>~2 hr</strong> — image overlays: the canvas-based binned-greenness layer, region rectangles, and the circular-clipped magnifier lens.</li>
+      <li><strong>~2 hr</strong> — data pipeline: per-region crop computation in <code>data_explorer.py</code> and the 60×50 overlay grid, then writing it as a single <code>manifest.json</code>.</li>
+      <li><strong>~1.5 hr</strong> — earlier iteration that decoded NASA's colormap-rendered NDVI tiles to recover numeric NDVI; that pipeline failed (most pixels collapsed to one bin), so we shrank scope to true-color imagery and explicit "proxy, not NDVI" labeling. The failure is documented; nothing is hidden.</li>
+      <li><strong>~1.5 hr</strong> — writeup, accessibility passes (aria labels on slider/buttons/dots), and the design critique fix list.</li>
+    </ul>
+
+    <p>Aspects that took the most time: making interactions <em>actually</em> lag-free at the slider's drag rate (using requestAnimationFrame and reusing canvas contexts instead of D3-redrawing the overlay), and getting the lat/lon-to-pixel math right when the WMS bbox is in lat-first order but image space is y-flipped.</p>
+
+    <h2>Data source &amp; license</h2>
+    <p>All imagery: NASA EOSDIS Global Imagery Browse Services
+    (<a href="https://gibs.earthdata.nasa.gov" target="_blank" rel="noopener">GIBS</a>),
+    layer <code>MODIS_Terra_CorrectedReflectance_TrueColor</code>,
+    accessed via <a href="https://nasa-gibs.github.io/gibs-api-docs/access-basics/" target="_blank" rel="noopener">WMS 1.1.1 GetMap</a>.
+    Public domain. Source application: <a href="https://worldview.earthdata.nasa.gov" target="_blank" rel="noopener">NASA Worldview</a>.</p>
+  </section>
+
+  <footer class="foot">
+    <p>DSC106 Project 3 · Maxime Chung · UC Berkeley · Imagery © NASA EOSDIS GIBS (public domain) · Built with D3.js v7.</p>
+  </footer>
+
+</main>
+
+<div id="tt" class="tooltip" hidden></div>
+
 </body>
 </html>
