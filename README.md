@@ -85,4 +85,3 @@ An earlier checkpoint attempted to derive numeric NDVI by RGB-decoding NASA's co
 ## License / credit
 
 Imagery © NASA EOSDIS GIBS (public domain).
-Code © 2026 Maxime Chung, MIT.
