@@ -1,7 +1,7 @@
 # Trends in California Vegetation Over Time
 
-DSC 106 · Project 3
-Site: <https://github.com/bigmacchung/dsc106-spr26-project3-viz](https://bigmacchung.github.io/dsc106-spr26-project3-viz/>
+DSC 106 · Project 3 · Final · Maxime Chung (UC Berkeley)
+Repo: <https://github.com/bigmacchung/dsc106-spr26-project3-viz>
 
 **Question:** *How does California's vegetation visually change across seasons — and how much does it change between a wet year and a dry year?*
 
@@ -34,11 +34,13 @@ GitHub Pages serves the repo root. After committing, enable Pages on `main` → 
 ## How to refresh the data
 
 ```bash
-pip install pillow numpy
-python3 artifacts/data_explorer.py    # rewrites data/manifest.json from JPG folder
+pip install requests pillow numpy
+python3 fetch_layers.py                # OPTIONAL: pulls Aqua + Bands721 alternates
+                                       #          to dodge clouds on cloudy dates
+python3 artifacts/data_explorer.py     # rewrites data/manifest.json
 ```
 
-Drop additional `california_truecolor_YYYY-MM-DD.jpg` files into `data/raw/vegetation/` and re-run the script — the site auto-picks up whatever is in the manifest.
+`fetch_layers.py` adds 16 cloud-piercing alternates (Aqua true-color + Terra Bands 7-2-1 false-color) for the existing 8 dates. The site's **Layer** chip group then becomes meaningful — it lets the viewer switch satellites for a clearer view on cloudy days like Jan 2023 (Terra true-color is ~23% near-white pixels). Drop any additional `california_*_YYYY-MM-DD.jpg` files following the same naming and re-run `data_explorer.py`.
 
 ## Interactions (all required by the rubric, plus extras)
 
@@ -47,6 +49,7 @@ Drop additional `california_truecolor_YYYY-MM-DD.jpg` files into `data/raw/veget
 | **Date slider** (24-stop) | Scrubs the main image. Keyboard ←/→. | Linear time access across the dataset. |
 | **Season + Year chips** | Dynamic query filters. | Compose to ask "all springs" or "all 2024". |
 | **Region chips** + click image | Filters chart to that ecoregion (Sierra Nevada, Central Valley, Southern California, Statewide). | Spatial→temporal linkage no static plot can do. |
+| **Layer chips** | Switch the active date between Terra true-color, Aqua true-color, and Bands 7-2-1 false-color. | Dodges cloud cover; same date through three different MODIS lenses. |
 | **Measure switch** | Greenness ↔ Brown ↔ Brightness. | Reveals dryback (brown) signal that mirrors greenness loss in summer. |
 | **Single / Compare / Grid view** | Switches main stage between one image, two side-by-side, or all eight as small multiples. | Compare mode pairs same-season different-year by default → drought-recovery contrast. |
 | **D3 brush on chart** | Drag to select a date range; the grid view dims out-of-range images. | Direct date-range filtering. |
@@ -85,3 +88,4 @@ An earlier checkpoint attempted to derive numeric NDVI by RGB-decoding NASA's co
 ## License / credit
 
 Imagery © NASA EOSDIS GIBS (public domain).
+Code © 2026 Maxime Chung, MIT.

@@ -69,6 +69,7 @@
     year: "all",
     region: "all",
     measure: "greenness",
+    layer: "terra-truecolor",  // active MODIS layer (cloud-aware switcher)
     idx: 0,
     idxB: 0,
     brushRange: null,      // [Date, Date] or null
@@ -76,6 +77,38 @@
     rects: false,
     lens: true,
   };
+
+  // resolve the file path for a record at the current (or fallback) layer
+  function fileFor(rec, slot = null) {
+    if (!rec) return null;
+    if (rec.layers) {
+      const want = (slot === "b") ? state.layerB || state.layer : state.layer;
+      const entry = rec.layers[want] || rec.layers[rec.primary_layer] || Object.values(rec.layers)[0];
+      return entry?.file || rec.file;
+    }
+    return rec.file;
+  }
+  function layerLabelFor(rec) {
+    if (!rec?.layers) return "Terra (true color)";
+    return rec.layers[state.layer]?.label || rec.layers[rec.primary_layer]?.label || "Terra (true color)";
+  }
+
+  // rAF-throttle helper — ensures we don't redraw faster than the screen
+  function rafThrottle(fn) {
+    let scheduled = false, lastArgs = null;
+    return (...args) => {
+      lastArgs = args;
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+        fn(...lastArgs);
+      });
+    };
+  }
+
+  // AbortController-managed image loader, so rapid scrubs don't pile up
+  const imageLoadCtrls = new Map(); // slot -> AbortController
 
   // image cache for the lens (so we can sample pixels without re-decoding)
   const imageBitmaps = new Map();   // path -> ImageBitmap
@@ -112,8 +145,11 @@
     renderLegend();
     renderAll();
     drawChart();
-    // pre-decode images for the lens
-    state.records.forEach(r => preloadImage(r.file));
+    // pre-decode images for the lens — every layer file we know about
+    state.records.forEach(r => {
+      preloadImage(r.file);
+      if (r.layers) Object.values(r.layers).forEach(l => preloadImage(l.file));
+    });
   }
 
   // ---------------------------------------------------------------- chips & controls
@@ -146,11 +182,19 @@
     bindChipGroup("measure-chips", "measure", () => { drawChart(); updateDetails(); });
     bindChipGroup("season-chips", "season", () => { applyFilters(); renderAll(); drawChart(); });
     bindChipGroup("year-chips",   "year",   () => { applyFilters(); renderAll(); drawChart(); });
+    // layer chip group is rebuilt each render — bind via delegation
+    el("layer-chips").addEventListener("click", e => {
+      const b = e.target.closest("button.chip"); if (!b) return;
+      state.layer = b.dataset.layer;
+      el("layer-chips").querySelectorAll("button.chip").forEach(x => x.classList.toggle("active", x === b));
+      renderAll();
+    });
 
-    el("date-slider").addEventListener("input", () => {
+    const onSlide = rafThrottle(() => {
       state.idx = +el("date-slider").value;
       renderAll(); drawChart();
     });
+    el("date-slider").addEventListener("input", onSlide, { passive: true });
 
     document.addEventListener("keydown", e => {
       if (!state.filtered.length) return;
@@ -232,6 +276,9 @@
     swapImage("a", a, "Left: " + altFor(a));
     if (state.mode === "compare") swapImage("b", b, "Right: " + altFor(b));
 
+    // Refresh the layer chip group based on what's available for the active date
+    renderLayerChips(a);
+
     el("date-readout").textContent = `${cap(a.season)} ${a.year} · ${a.date}`;
     el("tag-a").textContent = `${cap(a.season)} ${a.year}`;
     el("tag-b").textContent = `${cap(b.season)} ${b.year}`;
@@ -248,21 +295,39 @@
 
   function swapImage(slot, rec, alt) {
     const img = el(`img-${slot}`);
-    if (img.dataset.src === rec.file) return;
+    const target = fileFor(rec, slot);
+    if (img.dataset.src === target) return;
+
+    // Cancel any in-flight load on this slot — prevents stale loads
+    // from racing the latest one when the user scrubs fast.
+    if (imageLoadCtrls.has(slot)) {
+      try { imageLoadCtrls.get(slot).abort(); } catch (_) {}
+    }
+    const ctrl = new AbortController();
+    imageLoadCtrls.set(slot, ctrl);
+
     img.style.opacity = "0";
     const tmp = new Image();
+    const onAbort = () => { tmp.src = ""; };
+    ctrl.signal.addEventListener("abort", onAbort, { once: true });
+
     tmp.onload = () => {
-      img.src = rec.file;
+      if (ctrl.signal.aborted) return;
+      img.src = target;
       img.alt = alt;
-      img.dataset.src = rec.file;
+      img.dataset.src = target;
       requestAnimationFrame(() => {
         img.style.opacity = "1";
         renderOverlay(slot);
         renderRects(slot);
       });
     };
-    tmp.onerror = () => { img.alt = `Image not found: ${rec.file}`; img.style.opacity = "1"; };
-    tmp.src = rec.file;
+    tmp.onerror = () => {
+      if (ctrl.signal.aborted) return;
+      img.alt = `Image not found: ${target}`;
+      img.style.opacity = "1";
+    };
+    tmp.src = target;
   }
 
   function updateDetails() {
@@ -280,8 +345,40 @@
     el("d-measure").textContent = state.measure === "brightness"
       ? v.toFixed(1)
       : ((v >= 0 ? "+" : "") + v.toFixed(4));
+    el("d-cloud").textContent = (a.cloud_cover != null) ? (a.cloud_cover * 100).toFixed(1) + "%" : "—";
+    el("d-layer").textContent = layerLabelFor(a);
     el("caption").textContent = CAPTIONS[`${a.year}-${a.season}`] || "";
   }
+
+  // ---------------------------------------------------------------- layer chips
+  function renderLayerChips(rec) {
+    const host = el("layer-chips");
+    if (!host || !rec || !rec.layers) return;
+    const available = Object.keys(rec.layers);
+    // Make sure state.layer is valid for this date
+    if (!available.includes(state.layer)) state.layer = rec.primary_layer || available[0];
+    // (Re)build the chips to match the active date's available layers
+    const existing = Array.from(host.querySelectorAll("button.chip"));
+    const wantSet  = new Set(available);
+    existing.forEach(b => { if (!wantSet.has(b.dataset.layer)) b.remove(); });
+    const have = new Set(existing.map(b => b.dataset.layer));
+    available.forEach(lid => {
+      if (have.has(lid)) return;
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.dataset.layer = lid;
+      b.textContent = SHORT_LAYER_NAME[lid] || lid;
+      b.title = rec.layers[lid].label;
+      host.appendChild(b);
+    });
+    // active state
+    host.querySelectorAll("button.chip").forEach(b => b.classList.toggle("active", b.dataset.layer === state.layer));
+  }
+  const SHORT_LAYER_NAME = {
+    "terra-truecolor": "Terra true",
+    "aqua-truecolor":  "Aqua true",
+    "terra-bands721":  "Bands 7-2-1",
+  };
 
   // ---------------------------------------------------------------- legend
   function renderLegend() {
@@ -359,7 +456,8 @@
       if (!state.lens) return;
       const rec = slot === "a" ? state.filtered[state.idx] : state.filtered[state.idxB];
       if (!rec) return;
-      const bm = imageBitmaps.get(rec.file); if (!bm) return;
+      const path = fileFor(rec, slot);
+      const bm = imageBitmaps.get(path); if (!bm) return;
       const rect = holder.getBoundingClientRect();
       const x = ev.clientX - rect.left;
       const y = ev.clientY - rect.top;

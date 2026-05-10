@@ -49,6 +49,11 @@
         <button class="chip" data-region="socal">Southern Cal.</button>
       </div>
 
+      <div class="chips" id="layer-chips" aria-label="MODIS layer">
+        <span class="chip-label" title="Switch between satellite layers to dodge clouds on the active date">Layer</span>
+        <!-- layer buttons populated dynamically based on what's available on the active date -->
+      </div>
+
       <div class="chips" id="measure-chips" aria-label="Measure">
         <span class="chip-label">Measure</span>
         <button class="chip active" data-measure="greenness">Greenness</button>
@@ -135,6 +140,8 @@
         <dt>Year</dt>      <dd id="d-year">—</dd>
         <dt>Region</dt>    <dd id="d-region">Statewide</dd>
         <dt id="dt-measure">Greenness <em>(proxy)</em></dt>  <dd id="d-measure">—</dd>
+        <dt>Cloud cover <em>(visual)</em></dt>                <dd id="d-cloud">—</dd>
+        <dt>Layer</dt>                                         <dd id="d-layer">Terra (true color)</dd>
       </dl>
       <div class="legend" id="overlay-legend" hidden>
         <div class="legend-title">Greenness overlay (binned)</div>
