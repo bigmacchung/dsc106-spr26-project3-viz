@@ -534,11 +534,30 @@
   }
 
   // ---------------------------------------------------------------- D3 chart
+  // Action-title generator: states the takeaway for the current view (SWD #4).
+  function chartHeadline() {
+    const m = state.measure, r = state.region;
+    if (m === "greenness") {
+      if (r === "sierra")  return "Sierra Nevada was visibly greener in Jan 2023 (wet) than Jan 2024 (dry)";
+      if (r === "valley")  return "Central Valley peaks at +0.020 in spring 2024 — the greenest single image in the set";
+      if (r === "socal")   return "Southern California stays brown year-round; no positive greenness on any date";
+      return "California's greenness flips sign by season — positive in winter/spring, negative in summer/autumn";
+    }
+    if (m === "brown") {
+      if (r === "all") return "Brown proxy spikes statewide in summer; Central Valley dries hardest";
+      return `${REGION_LABEL[r]} — brown proxy peaks in summer/autumn`;
+    }
+    return "Image brightness varies with cloud cover and snow more than vegetation";
+  }
+
   function drawChart() {
     const svg = d3.select("#d3-chart");
     svg.selectAll("*").remove();
+    // Dynamic action headline (SWD #4)
+    const headlineEl = el("chart-headline");
+    if (headlineEl) headlineEl.textContent = chartHeadline();
 
-    const W = 960, H = 320, M = { top: 30, right: 120, bottom: 36, left: 56 };
+    const W = 960, H = 320, M = { top: 30, right: 130, bottom: 36, left: 60 };
     const iw = W - M.left - M.right, ih = H - M.top - M.bottom;
     const g = svg.append("g").attr("transform", `translate(${M.left},${M.top})`);
 
@@ -577,10 +596,23 @@
         .text(a.label);
     });
 
-    // gridlines
+    // gridlines (SWD #2 — light gray y-axis only)
     g.append("g").attr("class","grid")
       .call(d3.axisLeft(y).tickSize(-iw).tickFormat("").ticks(5))
       .selectAll("path").remove();
+
+    // Zero reference line (Gotcha #3 — explicit baseline for diverging proxy)
+    if (measure !== "brightness" && yMin < 0 && yMax > 0) {
+      g.append("line").attr("class","zero-line")
+        .attr("x1", 0).attr("x2", iw)
+        .attr("y1", y(0)).attr("y2", y(0))
+        .attr("stroke", "#1A1A17").attr("stroke-width", 0.7).attr("opacity", 0.55);
+      g.append("text")
+        .attr("x", iw - 4).attr("y", y(0) - 4)
+        .attr("text-anchor", "end")
+        .attr("font-size", 10).attr("fill", "#6B6962")
+        .text("0 — equal R/G mix");
+    }
 
     // axes
     g.append("g").attr("class","axis")
@@ -610,6 +642,8 @@
       .y(d => y(valueOf(d, d._region)))
       .defined(d => valueOf(d, d._region) != null);
 
+    // First pass: draw the lines.
+    const labelTargets = []; // collected for de-collision pass below
     visibleRegions.forEach(reg => {
       const data = state.records.map(r => ({...r, _region: reg }));
       const isFocus = state.region !== "all" && reg === state.region;
@@ -622,21 +656,42 @@
         .attr("stroke", isDimmed ? "#C7C5BD" : REGION_COLOR[reg])
         .attr("stroke-width", isFocus ? 2.6 : (isStatewide ? 1.4 : 2));
 
-      // end-of-line label
       const last = data[data.length - 1];
-      if (valueOf(last, reg) != null) {
-        g.append("text").attr("class","end-label")
-          .attr("x", x(new Date(last.date)) + 6)
-          .attr("y", y(valueOf(last, reg)) + 3)
-          .attr("fill", isDimmed ? "#9A9890" : REGION_COLOR[reg])
-          .text(REGION_LABEL[reg])
-          .on("click", () => {
-            state.region = reg;
-            document.querySelectorAll("#region-chips .chip").forEach(c =>
-              c.classList.toggle("active", c.dataset.region === reg));
-            drawChart(); updateDetails();
-          });
+      const v = valueOf(last, reg);
+      if (v != null) {
+        labelTargets.push({
+          reg,
+          color: isDimmed ? "#9A9890" : REGION_COLOR[reg],
+          weight: isFocus ? "700" : "600",
+          x: x(new Date(last.date)) + 6,
+          y: y(v) + 3,
+          text: REGION_LABEL[reg],
+        });
       }
+    });
+
+    // End-label de-collision (Gotcha #1) — sort by y, push apart by ≥14 px.
+    labelTargets.sort((a, b) => a.y - b.y);
+    const MIN_GAP = 14;
+    for (let i = 1; i < labelTargets.length; i++) {
+      if (labelTargets[i].y - labelTargets[i - 1].y < MIN_GAP) {
+        labelTargets[i].y = labelTargets[i - 1].y + MIN_GAP;
+      }
+    }
+    // Clamp to chart area
+    labelTargets.forEach(t => {
+      t.y = Math.max(8, Math.min(ih - 2, t.y));
+      g.append("text").attr("class", "end-label")
+        .attr("x", t.x).attr("y", t.y)
+        .attr("fill", t.color)
+        .attr("font-weight", t.weight)
+        .text(t.text)
+        .on("click", () => {
+          state.region = t.reg;
+          document.querySelectorAll("#region-chips .chip").forEach(c =>
+            c.classList.toggle("active", c.dataset.region === t.reg));
+          drawChart(); updateDetails();
+        });
     });
 
     // dots — every (record × region) pair

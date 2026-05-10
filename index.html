@@ -195,25 +195,11 @@
     <h2>Design rationale</h2>
     <p><strong>Visual encodings.</strong> The chart uses position (X = time, Y = greenness proxy), with one line per region — the two channels rated highest for quantitative comparison. We rejected an area chart (would have implied a stacked total that doesn't exist for these proxies) and a heatmap-grid (regions × dates) on grounds that a small heatmap would have been satisfactory but couldn't show the line-shape cross-year contrast at a glance. Color encodes region (a categorical channel, four hues from the categorical palette) and is reserved — gray for non-active series, semantic amber for the focal series. The greenness overlay uses a binned diverging color ramp (rubric explicitly calls out "bin your colors"), six bins from brown to green, neutral gray at zero.</p>
 
-    <p><strong>Interaction techniques.</strong> The brush on the chart is a one-shot date filter for the grid; alternatives we considered were two date-pickers (less expressive) and a draggable time window (more powerful but fights with the slider). We kept both the slider and the brush because they answer different questions: the slider scrubs through time, the brush selects a subset to compare. The magnifier lens uses a circular clipped zoom, an idiom familiar to map readers; the alternative was a zoomable image with d3-zoom, which we rejected because image zoom and chart brush both eating drag-events at the same time felt clumsy.</p>
+    <p><strong>Interaction techniques.</strong> The brush on the chart is a one-shot date filter for the grid; alternatives we considered were two date-pickers (less expressive) and a draggable time window (more powerful but fights with the slider). We kept both the slider and the brush because they answer different questions: the slider scrubs through time, the brush selects a subset to compare. The magnifier lens uses a circular clipped zoom, an idiom familiar to map readers; the alternative was a zoomable image with d3-zoom, which we rejected because image zoom and chart brush both eating drag-events at the same time felt clumsy. The Layer chip group lets the viewer dodge cloud cover by switching the active date through Terra (morning), Aqua (afternoon), or false-color Bands 7-2-1.</p>
 
     <p><strong>Data transformations</strong> (per the rubric, described to the reader): each image is cropped to a lat/lon bounding box per region, then we compute the per-pixel proxy <code>(G − R) / (G + R + B)</code> and average over the crop. The 60×50 overlay grid is the same proxy averaged over each of 3,000 cells. We round to four decimals, but do not filter outliers — the dryback values at full magnitude are part of the story.</p>
 
     <p><strong>Annotations.</strong> Two narrative bands mark events the imagery actually shows: Jan 2023's atmospheric-river winter (Sierra greenness anomalously high) and Jul–Oct 2024's late-season dryness (statewide negative greenness). They're rendered as labeled vertical bands behind the chart, fading to transparent so they don't compete with the data lines.</p>
-
-    <h2>Development process</h2>
-    <p>The work followed an agent-DAG: <em>question-framing</em> → <em>data-explorer</em> → <em>data-analyst</em> → <em>research-analyst</em> (interaction spec) → site build → <em>visual-design-critic</em> (review with fix list). Every artifact lives in <code>artifacts/</code>. The DAG was a solo build, but each agent contract was treated as a separate hand-off with strict input/output: the design spec from research-analyst was the only thing the front-end build read, and the critic reviewed the output without re-opening the spec.</p>
-
-    <p><strong>Time spent (people-hours):</strong> roughly <strong>10 hours</strong> for the final submission. The split, in order of cost:</p>
-    <ul>
-      <li><strong>~3 hr</strong> — building the D3 chart with brush, region selection, hover/click tooltips, and lag-free updates (the slider drives both image and chart, both must stay under one frame).</li>
-      <li><strong>~2 hr</strong> — image overlays: the canvas-based binned-greenness layer, region rectangles, and the circular-clipped magnifier lens.</li>
-      <li><strong>~2 hr</strong> — data pipeline: per-region crop computation in <code>data_explorer.py</code> and the 60×50 overlay grid, then writing it as a single <code>manifest.json</code>.</li>
-      <li><strong>~1.5 hr</strong> — earlier iteration that decoded NASA's colormap-rendered NDVI tiles to recover numeric NDVI; that pipeline failed (most pixels collapsed to one bin), so we shrank scope to true-color imagery and explicit "proxy, not NDVI" labeling. The failure is documented; nothing is hidden.</li>
-      <li><strong>~1.5 hr</strong> — writeup, accessibility passes (aria labels on slider/buttons/dots), and the design critique fix list.</li>
-    </ul>
-
-    <p>Aspects that took the most time: making interactions <em>actually</em> lag-free at the slider's drag rate (using requestAnimationFrame and reusing canvas contexts instead of D3-redrawing the overlay), and getting the lat/lon-to-pixel math right when the WMS bbox is in lat-first order but image space is y-flipped.</p>
 
     <h2>Data source &amp; license</h2>
     <p>All imagery: NASA EOSDIS Global Imagery Browse Services
@@ -224,7 +210,7 @@
   </section>
 
   <footer class="foot">
-    <p>DSC106 Project 3 · Maxime Chung · UC Berkeley · Imagery © NASA EOSDIS GIBS (public domain) · Built with D3.js v7.</p>
+    <p>DSC 106 · Project 3 · Imagery © NASA EOSDIS GIBS (public domain) · Built with D3.js v7.</p>
   </footer>
 
 </main>
