@@ -557,7 +557,7 @@
     const headlineEl = el("chart-headline");
     if (headlineEl) headlineEl.textContent = chartHeadline();
 
-    const W = 960, H = 320, M = { top: 30, right: 130, bottom: 36, left: 60 };
+    const W = 960, H = 420, M = { top: 48, right: 150, bottom: 50, left: 72 };
     const iw = W - M.left - M.right, ih = H - M.top - M.bottom;
     const g = svg.append("g").attr("transform", `translate(${M.left},${M.top})`);
 
@@ -591,7 +591,7 @@
         .attr("x", Math.min(x0, x1)).attr("y", 0)
         .attr("width", Math.abs(x1 - x0)).attr("height", ih);
       g.append("text").attr("class","annot-label")
-        .attr("x", (x0 + x1) / 2).attr("y", 12)
+        .attr("x", (x0 + x1) / 2).attr("y", 16)
         .attr("text-anchor","middle")
         .text(a.label);
     });
@@ -614,21 +614,21 @@
         .text("0 — equal R/G mix");
     }
 
-    // axes
+    // axes — tickPadding pulls labels off the axis line for breathing room
     g.append("g").attr("class","axis")
       .attr("transform", `translate(0,${ih})`)
-      .call(d3.axisBottom(x).ticks(8).tickFormat(d3.timeFormat("%b %Y")));
+      .call(d3.axisBottom(x).ticks(7).tickFormat(d3.timeFormat("%b %Y")).tickPadding(8));
     const yFormat = measure === "brightness" ? d3.format(".0f") : d3.format("+.3f");
     g.append("g").attr("class","axis")
-      .call(d3.axisLeft(y).ticks(5).tickFormat(yFormat));
+      .call(d3.axisLeft(y).ticks(6).tickFormat(yFormat).tickPadding(8));
 
-    // axis labels
+    // axis labels — pulled higher so they never collide with chart top
     g.append("text").attr("class","axis-title")
-      .attr("x", 0).attr("y", -16)
+      .attr("x", 0).attr("y", -28)
       .text(MEASURE_LABEL[measure]);
     if (measure !== "brightness") {
       g.append("text").attr("class","axis-sub")
-        .attr("x", 0).attr("y", -2)
+        .attr("x", 0).attr("y", -10)
         .text("Image-derived proxy, not official NDVI");
     }
 
@@ -654,7 +654,9 @@
         .attr("class", "series")
         .attr("d", line)
         .attr("stroke", isDimmed ? "#C7C5BD" : REGION_COLOR[reg])
-        .attr("stroke-width", isFocus ? 2.6 : (isStatewide ? 1.4 : 2));
+        .attr("stroke-width", isFocus ? 3.4 : (isStatewide ? 2.0 : 2.6))
+        .attr("stroke-linecap", "round")
+        .attr("stroke-linejoin", "round");
 
       const last = data[data.length - 1];
       const v = valueOf(last, reg);
@@ -670,9 +672,10 @@
       }
     });
 
-    // End-label de-collision (Gotcha #1) — sort by y, push apart by ≥14 px.
+    // End-label de-collision (Gotcha #1) — sort by y, push apart by ≥18 px
+    // so 12-px text has at least 6 px of breathing space between baselines.
     labelTargets.sort((a, b) => a.y - b.y);
-    const MIN_GAP = 14;
+    const MIN_GAP = 18;
     for (let i = 1; i < labelTargets.length; i++) {
       if (labelTargets[i].y - labelTargets[i - 1].y < MIN_GAP) {
         labelTargets[i].y = labelTargets[i - 1].y + MIN_GAP;
@@ -698,6 +701,18 @@
     const tip = d3.select("#tt");
     const activeFile = state.filtered[state.idx]?.file;
     visibleRegions.forEach(reg => {
+      // White halo first — ensures dots remain visible when lines cross them
+      g.selectAll(`.halo-${reg}`).data(state.records).enter().append("circle")
+        .attr("class", "halo")
+        .attr("cx", d => x(new Date(d.date)))
+        .attr("cy", d => {
+          const v = valueOf(d, reg);
+          return v == null ? -100 : y(v);
+        })
+        .attr("r", 8.5)
+        .attr("fill", "#F7F6F2")
+        .attr("pointer-events", "none");
+
       g.selectAll(`.dot-${reg}`).data(state.records).enter().append("circle")
         .attr("class", d => "dot dot-" + reg + (d.file === activeFile && reg === (state.region === "all" ? "all" : state.region) ? " active" : ""))
         .attr("cx", d => x(new Date(d.date)))
@@ -705,10 +720,10 @@
           const v = valueOf(d, reg);
           return v == null ? -100 : y(v);
         })
-        .attr("r", 5)
+        .attr("r", 6.5)
         .attr("fill", REGION_COLOR[reg])
         .attr("stroke", "white")
-        .attr("stroke-width", 1)
+        .attr("stroke-width", 1.4)
         .on("mousemove", function(ev, d) {
           const v = valueOf(d, reg);
           tip.style("left", (ev.clientX + 14) + "px")
