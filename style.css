@@ -373,10 +373,13 @@ code {
 /* SWD #3 direct labels — 13px / 10pt for readability. */
 #d3-chart .end-label { font-size: 13px; cursor: pointer; font-weight: 700; }
 #d3-chart .annot-band { fill: var(--soft); opacity: 0.55; }
+#d3-chart .annot-tick { fill: var(--accent-2); opacity: 0.55; }
 #d3-chart .annot-label { font-size: 11.5px; fill: var(--accent-2); font-weight: 700; }
-#d3-chart .brush .selection { fill: var(--accent-2); fill-opacity: 0.18; stroke: var(--accent-2); stroke-width: 1; }
-#d3-chart .scrub-line { stroke: var(--accent-2); stroke-width: 1.4; stroke-dasharray: 3 2; }
-#d3-chart .zero-line { /* drawn inline; CSS just for opacity tuning */ pointer-events: none; }
+/* Brush — outline only, no fill, so it doesn't compete with annotation ticks. */
+#d3-chart .brush .selection { fill: var(--accent-2); fill-opacity: 0.05; stroke: var(--accent-2); stroke-width: 1; stroke-dasharray: 4 3; }
+#d3-chart .zero-line { pointer-events: none; }
+#d3-chart .legend-text { font-size: 13px; }
+#d3-chart .legend-item:hover .legend-text { text-decoration: underline; }
 
 /* ============================== TOOLTIP ============================== */
 .tooltip {

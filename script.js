@@ -26,6 +26,13 @@
     brown:      "Brown proxy (R − G) / (G + R + B)",
     brightness: "Brightness mean(R + G + B)/3",
   };
+  // Compact formula labels for the y-axis caption (no redundant "proxy" word —
+  // the chart-foot already explains the transformation in plain English).
+  const MEASURE_FORMULA = {
+    greenness:  "(G − R) / (G + R + B)  · proxy, not NDVI",
+    brown:      "(R − G) / (G + R + B)  · proxy",
+    brightness: "(R + G + B) / 3",
+  };
 
   // 6-bin diverging palette for greenness overlay
   // (rubric explicitly recommended binned colors)
@@ -557,7 +564,9 @@
     const headlineEl = el("chart-headline");
     if (headlineEl) headlineEl.textContent = chartHeadline();
 
-    const W = 960, H = 420, M = { top: 48, right: 150, bottom: 50, left: 72 };
+    // Smaller right margin — labels moved to a top legend strip instead
+    // of a stacked column in the right margin. Less clutter, more chart.
+    const W = 960, H = 380, M = { top: 60, right: 28, bottom: 44, left: 64 };
     const iw = W - M.left - M.right, ih = H - M.top - M.bottom;
     const g = svg.append("g").attr("transform", `translate(${M.left},${M.top})`);
 
@@ -584,16 +593,15 @@
       .range([ih, 0])
       .nice();
 
-    // annotations behind grid
+    // Annotations are drawn as MARKER ticks at the top of the chart instead
+    // of full-height bands. Labels appear only on hover (in the tooltip).
+    // This frees the data area entirely.
     ANNOTATIONS.forEach(a => {
       const x0 = x(new Date(a.start)), x1 = x(new Date(a.end));
-      g.append("rect").attr("class","annot-band")
-        .attr("x", Math.min(x0, x1)).attr("y", 0)
-        .attr("width", Math.abs(x1 - x0)).attr("height", ih);
-      g.append("text").attr("class","annot-label")
-        .attr("x", (x0 + x1) / 2).attr("y", 16)
-        .attr("text-anchor","middle")
-        .text(a.label);
+      g.append("rect").attr("class","annot-tick")
+        .attr("x", Math.min(x0, x1)).attr("y", -8)
+        .attr("width", Math.abs(x1 - x0)).attr("height", 4)
+        .append("title").text(a.label);
     });
 
     // gridlines (SWD #2 — light gray y-axis only)
@@ -601,17 +609,13 @@
       .call(d3.axisLeft(y).tickSize(-iw).tickFormat("").ticks(5))
       .selectAll("path").remove();
 
-    // Zero reference line (Gotcha #3 — explicit baseline for diverging proxy)
+    // Zero reference line — quiet 0.5px ink at 35% opacity. No caption;
+    // the y-axis tick "0.000" is enough to identify it.
     if (measure !== "brightness" && yMin < 0 && yMax > 0) {
       g.append("line").attr("class","zero-line")
         .attr("x1", 0).attr("x2", iw)
         .attr("y1", y(0)).attr("y2", y(0))
-        .attr("stroke", "#1A1A17").attr("stroke-width", 0.7).attr("opacity", 0.55);
-      g.append("text")
-        .attr("x", iw - 4).attr("y", y(0) - 4)
-        .attr("text-anchor", "end")
-        .attr("font-size", 10).attr("fill", "#6B6962")
-        .text("0 — equal R/G mix");
+        .attr("stroke", "#1A1A17").attr("stroke-width", 0.5).attr("opacity", 0.35);
     }
 
     // axes — tickPadding pulls labels off the axis line for breathing room
@@ -622,15 +626,8 @@
     g.append("g").attr("class","axis")
       .call(d3.axisLeft(y).ticks(6).tickFormat(yFormat).tickPadding(8));
 
-    // axis labels — pulled higher so they never collide with chart top
-    g.append("text").attr("class","axis-title")
-      .attr("x", 0).attr("y", -28)
-      .text(MEASURE_LABEL[measure]);
-    if (measure !== "brightness") {
-      g.append("text").attr("class","axis-sub")
-        .attr("x", 0).attr("y", -10)
-        .text("Image-derived proxy, not official NDVI");
-    }
+    // No inline axis caption. The card title and the chart-foot already
+    // explain what's on the y-axis; duplicating it here was clutter.
 
     // Lines per region (only those visible per region filter)
     const visibleRegions = state.region === "all"
@@ -642,8 +639,43 @@
       .y(d => y(valueOf(d, d._region)))
       .defined(d => valueOf(d, d._region) != null);
 
-    // First pass: draw the lines.
-    const labelTargets = []; // collected for de-collision pass below
+    // Horizontal legend strip ABOVE the chart — replaces the stacked
+    // right-margin labels that used to fight with the data lines.
+    const legend = g.append("g").attr("class","legend").attr("transform", `translate(0, ${-40})`);
+    let cursor = 0;
+    visibleRegions.forEach(reg => {
+      const isFocus = state.region !== "all" && reg === state.region;
+      const isDimmed = state.region !== "all" && reg === "all";
+      const color = isDimmed ? "#9A9890" : REGION_COLOR[reg];
+      const grp = legend.append("g")
+        .attr("class","legend-item")
+        .attr("transform", `translate(${cursor},0)`)
+        .style("cursor","pointer")
+        .on("click", () => {
+          state.region = reg;
+          document.querySelectorAll("#region-chips .chip").forEach(c =>
+            c.classList.toggle("active", c.dataset.region === reg));
+          drawChart(); updateDetails();
+        });
+      grp.append("line")
+        .attr("x1", 0).attr("x2", 18)
+        .attr("y1", 0).attr("y2", 0)
+        .attr("stroke", color)
+        .attr("stroke-width", isFocus ? 3.4 : 2.4)
+        .attr("stroke-linecap","round");
+      grp.append("circle").attr("cx", 9).attr("cy", 0).attr("r", 3.5).attr("fill", color);
+      const text = grp.append("text")
+        .attr("x", 26).attr("y", 4)
+        .attr("class","legend-text")
+        .attr("fill", color)
+        .attr("font-weight", isFocus ? 700 : 600)
+        .text(REGION_LABEL[reg]);
+      // approximate width — measured after append
+      const bbox = text.node().getBBox();
+      cursor += 26 + bbox.width + 22;
+    });
+
+    // Draw the lines themselves.
     visibleRegions.forEach(reg => {
       const data = state.records.map(r => ({...r, _region: reg }));
       const isFocus = state.region !== "all" && reg === state.region;
@@ -657,44 +689,6 @@
         .attr("stroke-width", isFocus ? 3.4 : (isStatewide ? 2.0 : 2.6))
         .attr("stroke-linecap", "round")
         .attr("stroke-linejoin", "round");
-
-      const last = data[data.length - 1];
-      const v = valueOf(last, reg);
-      if (v != null) {
-        labelTargets.push({
-          reg,
-          color: isDimmed ? "#9A9890" : REGION_COLOR[reg],
-          weight: isFocus ? "700" : "600",
-          x: x(new Date(last.date)) + 6,
-          y: y(v) + 3,
-          text: REGION_LABEL[reg],
-        });
-      }
-    });
-
-    // End-label de-collision (Gotcha #1) — sort by y, push apart by ≥18 px
-    // so 12-px text has at least 6 px of breathing space between baselines.
-    labelTargets.sort((a, b) => a.y - b.y);
-    const MIN_GAP = 18;
-    for (let i = 1; i < labelTargets.length; i++) {
-      if (labelTargets[i].y - labelTargets[i - 1].y < MIN_GAP) {
-        labelTargets[i].y = labelTargets[i - 1].y + MIN_GAP;
-      }
-    }
-    // Clamp to chart area
-    labelTargets.forEach(t => {
-      t.y = Math.max(8, Math.min(ih - 2, t.y));
-      g.append("text").attr("class", "end-label")
-        .attr("x", t.x).attr("y", t.y)
-        .attr("fill", t.color)
-        .attr("font-weight", t.weight)
-        .text(t.text)
-        .on("click", () => {
-          state.region = t.reg;
-          document.querySelectorAll("#region-chips .chip").forEach(c =>
-            c.classList.toggle("active", c.dataset.region === t.reg));
-          drawChart(); updateDetails();
-        });
     });
 
     // dots — every (record × region) pair
@@ -746,15 +740,8 @@
         });
     });
 
-    // scrub line at active date
-    if (activeFile) {
-      const cur = state.records.find(r => r.file === activeFile);
-      if (cur) {
-        g.append("line").attr("class","scrub-line")
-          .attr("x1", x(new Date(cur.date))).attr("x2", x(new Date(cur.date)))
-          .attr("y1", 0).attr("y2", ih);
-      }
-    }
+    // No vertical scrub line — the active dot's larger radius + ink stroke
+    // already marks the current date without adding a vertical band.
 
     // brush
     const brush = d3.brushX()
