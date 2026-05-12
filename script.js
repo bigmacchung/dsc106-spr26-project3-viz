@@ -152,6 +152,7 @@
     renderLegend();
     renderAll();
     drawChart();
+    drawHeatmap();
     // pre-decode images for the lens — every layer file we know about
     state.records.forEach(r => {
       preloadImage(r.file);
@@ -533,7 +534,7 @@
           state.mode = "single";
           el("stage").dataset.mode = "single";
           document.querySelectorAll(".seg button").forEach(x => x.classList.toggle("active", x.dataset.mode === "single"));
-          renderAll(); drawChart();
+          renderAll(); drawChart(); drawHeatmap();
         }
       });
       host.appendChild(cell);
@@ -758,7 +759,112 @@
       buildGridView();
     }
   }
+  
+  function drawHeatmap() {
 
+    const svg = d3.select("#heatmap");
+
+    if (svg.empty()) return;
+
+    svg.selectAll("*").remove();
+
+    const margin = { top: 40, right: 20, bottom: 70, left: 130 };
+
+    const width = 960 - margin.left - margin.right;
+    const height = 500 - margin.top - margin.bottom;
+
+    const g = svg.append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    const regions = REGIONS;
+
+    const dates = state.records.map(d => d.date);
+
+    const x = d3.scaleBand()
+      .domain(dates)
+      .range([0, width])
+      .padding(0.05);
+
+    const y = d3.scaleBand()
+      .domain(regions)
+      .range([0, height])
+      .padding(0.05);
+
+    const values = [];
+
+    state.records.forEach(r => {
+      regions.forEach(reg => {                    
+
+        const stats = reg === "all"
+          ? r.all
+          : r.regions[reg];
+
+        if (stats) {
+          values.push(stats.greenness);
+        }
+
+      });
+    });
+
+    const color = d3.scaleLinear()
+      .domain([
+        d3.min(values),
+        0,
+        d3.max(values)
+      ])
+      .range([
+        "#7B3F00",  // brown = dry / negative
+        "#F3E8C8",  // neutral = near zero
+        "#064E3B"   // dark green = greener / positive
+      ]);
+
+    const cells = [];
+
+    state.records.forEach(r => {
+      regions.forEach(reg => {
+
+        cells.push({
+          date: r.date,
+          region: reg,
+          value: (
+            reg === "all"
+              ? r.all.greenness
+              : r.regions[reg].greenness
+          )
+        });
+
+      });
+    });
+
+    g.selectAll("rect")
+      .data(cells)
+      .enter()
+      .append("rect")
+      .attr("x", d => x(d.date))
+      .attr("y", d => y(d.region))
+      .attr("width", x.bandwidth())
+      .attr("height", y.bandwidth())
+      .attr("rx", 4)
+      .attr("fill", d => color(d.value));
+
+    g.append("g")
+      .call(
+        d3.axisLeft(y)
+          .tickFormat(r => REGION_LABEL[r])
+      );
+
+    g.append("g")
+      .attr("transform", `translate(0,${height})`)
+      .call(
+        d3.axisBottom(x)
+          .tickFormat(d =>
+            d3.timeFormat("%b %Y")(new Date(d))
+          )
+      )
+      .selectAll("text")
+      .attr("transform", "rotate(-30)")
+      .style("text-anchor", "end");
+  }
   // ---------------------------------------------------------------- helpers
   function cap(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
 
