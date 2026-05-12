@@ -177,8 +177,31 @@
       <strong>Transformation:</strong> per image we crop the JPG to each region's lat/lon bounding box, then average <code>(G − R) / (G + R + B)</code> across those pixels. Values shown as proxies, never as NDVI.
     </p>
   </section>
-  
-  <svg id="heatmap" width="900" height="500"></svg>
+
+  <section class="chart-card heatmap-card">
+
+  <div class="chart-header">
+    <div>
+      <h2 class="chart-title">
+        Regional Greenness Heatmap
+      </h2>
+
+      <p class="chart-sub">
+        A compact comparison of vegetation greenness across California regions and dates.
+      </p>
+    </div>
+  </div>
+
+  <svg id="heatmap" viewBox="0 0 960 420" preserveAspectRatio="xMidYMid meet"></svg>
+
+  <p class="chart-foot">
+    Brown cells indicate drier / more negative greenness proxy values,
+    while greener cells indicate stronger visible vegetation signals.
+  </p>
+
+</section>
+  <!-- <svg id="heatmap" width="900" height="500"></svg>
+ -->
 
   <!-- =========================================================
        WRITEUP
