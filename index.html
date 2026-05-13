@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Trends in California Vegetation Over Time</title>
-  <meta name="description" content="DSC106 Project 3 — Real NASA Terra/MODIS imagery of California, with brushing, region-click filtering, magnifier lens, and binned greenness overlay. D3.js." />
+  <meta name="description" content="DSC106 Project 3: Real NASA Terra/MODIS imagery of California, with brushing, region-click filtering, magnifier lens, and binned greenness overlay. D3.js." />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" defer></script>
   <script src="script.js" defer></script>
@@ -14,7 +14,7 @@
 <header class="hero">
   <div class="wrap">
     <h1>Trends in California Vegetation Over Time</h1>
-    <p class="lede">How does California's vegetation visually change across seasons — and how much does it change <em>between</em> a wet year and a dry year?</p>
+    <p class="lede">How does California's vegetation visually change across seasons, and how much does it change <em>between</em> a wet year and a dry year?</p>
     <p class="meta">
       8 real NASA <strong>Terra/MODIS</strong> true-color tiles via
       <a href="https://gibs.earthdata.nasa.gov" target="_blank" rel="noopener">NASA GIBS</a>
@@ -88,7 +88,7 @@
     <div class="row slider-row">
       <label class="slider-label" for="date-slider">Date</label>
       <input id="date-slider" type="range" min="0" max="0" value="0" step="1" aria-label="Date" />
-      <output id="date-readout" class="readout">—</output>
+      <output id="date-readout" class="readout">Loading</output>
     </div>
   </section>
 
@@ -98,7 +98,7 @@
   <p class="story-hint" id="story-hint">
     <strong>What you're looking at on load:</strong>
     Jan 1, 2023 (wet atmospheric-river winter, left) vs Jan 1, 2024 (dry winter, right).
-    Sierra greenness fell from <strong>+0.0004</strong> to <strong>−0.0345</strong> in one year — visible by eye. Use the slider to explore the rest.
+    Sierra greenness fell from <strong>+0.0004</strong> to <strong>−0.0345</strong> in one year, visible by eye. Use the slider to explore the rest.
   </p>
 
   <section class="stage-row">
@@ -141,12 +141,12 @@
     <aside class="details" aria-live="polite">
       <h2 class="details-title">Details</h2>
       <dl id="details-list">
-        <dt>Date</dt>      <dd id="d-date">—</dd>
-        <dt>Season</dt>    <dd id="d-season">—</dd>
-        <dt>Year</dt>      <dd id="d-year">—</dd>
+        <dt>Date</dt>      <dd id="d-date">Loading</dd>
+        <dt>Season</dt>    <dd id="d-season">Loading</dd>
+        <dt>Year</dt>      <dd id="d-year">Loading</dd>
         <dt>Region</dt>    <dd id="d-region">Statewide</dd>
-        <dt id="dt-measure">Greenness <em>(proxy)</em></dt>  <dd id="d-measure">—</dd>
-        <dt>Cloud cover <em>(visual)</em></dt>                <dd id="d-cloud">—</dd>
+        <dt id="dt-measure">Greenness <em>(proxy)</em></dt>  <dd id="d-measure">Loading</dd>
+        <dt>Cloud cover <em>(visual)</em></dt>                <dd id="d-cloud">Loading</dd>
         <dt>Layer</dt>                                         <dd id="d-layer">Terra (true color)</dd>
       </dl>
       <div class="legend" id="overlay-legend" hidden>
@@ -190,20 +190,20 @@
   <section class="writeup">
 
     <h2>What you can discover that a static plot can't show</h2>
-    <p>The <em>question</em> — how does California's vegetation visually change across seasons — has both a spatial answer (Sierra vs Valley vs SoCal) and a temporal answer (winter vs summer, 2023 vs 2024). One static line chart hides one of those dimensions; one static map hides the other. The interactions on this page do four things a static plot cannot:</p>
+    <p>The <em>question</em>, how does California's vegetation visually change across seasons, has both a spatial answer (Sierra vs Valley vs SoCal) and a temporal answer (winter vs summer, 2023 vs 2024). One static line chart hides one of those dimensions; one static map hides the other. The interactions on this page do four things a static plot cannot:</p>
     <ul>
       <li><strong>Linked image ↔ chart.</strong> Click a dot, jump to that image. Brush a date range, the grid filters to those images. The chart and the imagery are the same data viewed from two angles.</li>
-      <li><strong>Region click filtering.</strong> The "Region" chips and the colored region rectangles on the image both filter the chart to one ecoregion. Sierra Nevada's swing from Jan 2023 (+0.0004) to Jan 2024 (−0.0345) appears immediately — a wet-winter / dry-winter contrast a single line can't isolate.</li>
+      <li><strong>Region click filtering.</strong> The "Region" chips and the colored region rectangles on the image both filter the chart to one ecoregion. Sierra Nevada's swing from Jan 2023 (+0.0004) to Jan 2024 (−0.0345) appears immediately, showing a wet-winter / dry-winter contrast a single line can't isolate.</li>
       <li><strong>Magnifier lens on the image.</strong> Pixel-level inspection of a 1200×1000 satellite tile is impossible in a static plot; the lens reveals snowpack texture in Sierra and farm-block patterns in the Central Valley you can't see at thumbnail size.</li>
       <li><strong>Greenness overlay (binned color).</strong> Toggling the overlay re-projects the image into a 60×50 grid of binned greenness values, exposing where in the state the change concentrates (e.g. Central Valley Apr 2024 spike).</li>
     </ul>
 
     <h2>Design rationale</h2>
-    <p><strong>Visual encodings.</strong> The chart uses position (X = time, Y = greenness proxy), with one line per region — the two channels rated highest for quantitative comparison. We rejected an area chart (would have implied a stacked total that doesn't exist for these proxies) and a heatmap-grid (regions × dates) on grounds that a small heatmap would have been satisfactory but couldn't show the line-shape cross-year contrast at a glance. Color encodes region (a categorical channel, four hues from the categorical palette) and is reserved — gray for non-active series, semantic amber for the focal series. The greenness overlay uses a binned diverging color ramp (rubric explicitly calls out "bin your colors"), six bins from brown to green, neutral gray at zero.</p>
+    <p><strong>Visual encodings.</strong> The chart uses position (X = time, Y = greenness proxy), with one line per region, using the two channels rated highest for quantitative comparison. We rejected an area chart (would have implied a stacked total that doesn't exist for these proxies) and a heatmap-grid (regions × dates) on grounds that a small heatmap would have been satisfactory but couldn't show the line-shape cross-year contrast at a glance. Color encodes region (a categorical channel, four hues from the categorical palette) and is reserved: gray for non-active series, semantic amber for the focal series. The greenness overlay uses a binned diverging color ramp (rubric explicitly calls out "bin your colors"), six bins from brown to green, neutral gray at zero.</p>
 
     <p><strong>Interaction techniques.</strong> The brush on the chart is a one-shot date filter for the grid; alternatives we considered were two date-pickers (less expressive) and a draggable time window (more powerful but fights with the slider). We kept both the slider and the brush because they answer different questions: the slider scrubs through time, the brush selects a subset to compare. The magnifier lens uses a circular clipped zoom, an idiom familiar to map readers; the alternative was a zoomable image with d3-zoom, which we rejected because image zoom and chart brush both eating drag-events at the same time felt clumsy. The Layer chip group lets the viewer dodge cloud cover by switching the active date through Terra (morning), Aqua (afternoon), or false-color Bands 7-2-1.</p>
 
-    <p><strong>Data transformations</strong> (per the rubric, described to the reader): each image is cropped to a lat/lon bounding box per region, then we compute the per-pixel proxy <code>(G − R) / (G + R + B)</code> and average over the crop. The 60×50 overlay grid is the same proxy averaged over each of 3,000 cells. We round to four decimals, but do not filter outliers — the dryback values at full magnitude are part of the story.</p>
+    <p><strong>Data transformations</strong> (per the rubric, described to the reader): each image is cropped to a lat/lon bounding box per region, then we compute the per-pixel proxy <code>(G − R) / (G + R + B)</code> and average over the crop. The 60×50 overlay grid is the same proxy averaged over each of 3,000 cells. We round to four decimals, but do not filter outliers because the dryback values at full magnitude are part of the story.</p>
 
     <p><strong>Annotations.</strong> Two narrative bands mark events the imagery actually shows: Jan 2023's atmospheric-river winter (Sierra greenness anomalously high) and Jul–Oct 2024's late-season dryness (statewide negative greenness). They're rendered as labeled vertical bands behind the chart, fading to transparent so they don't compete with the data lines.</p>
 

@@ -51,14 +51,14 @@
 
   // narrative captions keyed off (year, season)
   const CAPTIONS = {
-    "2023-winter": "January 2023 — atmospheric-river winter ends the 2020–22 drought; Sierra greenness anomalously high (+0.0004), valley a touch wet.",
-    "2023-spring": "April 2023 — recovery spring. Statewide greenness barely positive (+0.0002); Central Valley still has farm-block greenness (+0.0022).",
-    "2023-summer": "July 2023 — statewide brown-out (−0.0264). Even after a wet winter, summer dries California out fast.",
-    "2023-autumn": "October 2023 — pre-rain low. Brown proxy peaks across all regions.",
-    "2024-winter": "January 2024 — drier winter; Sierra greenness collapses to −0.0345 (vs +0.0004 the year before). The wet/dry contrast is visible by eye.",
-    "2024-spring": "April 2024 — Central Valley peaks (+0.0198), the greenest single region-date in this dataset. Sierra still recovering.",
-    "2024-summer": "July 2024 — summer brown-out continues; statewide greenness back to negative.",
-    "2024-autumn": "October 2024 — late-season dryness ahead of next winter rains. Most-negative end-of-year greenness across all regions.",
+    "2023-winter": "January 2023: Atmospheric-river winter ends the 2020–22 drought. Sierra greenness is anomalously high (+0.0004), and the valley is a touch wet.",
+    "2023-spring": "April 2023: Recovery spring. Statewide greenness is barely positive (+0.0002). Central Valley still has farm-block greenness (+0.0022).",
+    "2023-summer": "July 2023: Statewide brown-out (−0.0264). Even after a wet winter, summer dries California out fast.",
+    "2023-autumn": "October 2023: Pre-rain low. Brown proxy peaks across all regions.",
+    "2024-winter": "January 2024: Drier winter. Sierra greenness collapses to −0.0345, compared with +0.0004 the year before. The wet/dry contrast is visible by eye.",
+    "2024-spring": "April 2024: Central Valley peaks (+0.0198), the greenest single region-date in this dataset. Sierra is still recovering.",
+    "2024-summer": "July 2024: Summer brown-out continues. Statewide greenness is back to negative.",
+    "2024-autumn": "October 2024: Late-season dryness ahead of next winter rains. Most-negative end-of-year greenness across all regions.",
   };
 
   // narrative annotations on the chart
@@ -353,7 +353,7 @@
     el("d-measure").textContent = state.measure === "brightness"
       ? v.toFixed(1)
       : ((v >= 0 ? "+" : "") + v.toFixed(4));
-    el("d-cloud").textContent = (a.cloud_cover != null) ? (a.cloud_cover * 100).toFixed(1) + "%" : "—";
+    el("d-cloud").textContent = (a.cloud_cover != null) ? (a.cloud_cover * 100).toFixed(1) + "%" : "Not available";
     el("d-layer").textContent = layerLabelFor(a);
     el("caption").textContent = CAPTIONS[`${a.year}-${a.season}`] || "";
   }
@@ -547,13 +547,13 @@
     const m = state.measure, r = state.region;
     if (m === "greenness") {
       if (r === "sierra")  return "Sierra Nevada was visibly greener in Jan 2023 (wet) than Jan 2024 (dry)";
-      if (r === "valley")  return "Central Valley peaks at +0.020 in spring 2024 — the greenest single image in the set";
+      if (r === "valley")  return "Central Valley peaks at +0.020 in spring 2024, the greenest single image in the set";
       if (r === "socal")   return "Southern California stays brown year-round; no positive greenness on any date";
-      return "California's greenness flips sign by season — positive in winter/spring, negative in summer/autumn";
+      return "California's greenness flips sign by season: positive in winter/spring, negative in summer/autumn";
     }
     if (m === "brown") {
       if (r === "all") return "Brown proxy spikes statewide in summer; Central Valley dries hardest";
-      return `${REGION_LABEL[r]} — brown proxy peaks in summer/autumn`;
+      return `${REGION_LABEL[r]}: brown proxy peaks in summer/autumn`;
     }
     return "Image brightness varies with cloud cover and snow more than vegetation";
   }
