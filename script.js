@@ -782,13 +782,20 @@
     const prev = idx > 0 ? regionRecords[idx - 1] : null;
     const change = prev ? cell.value - prev.value : null;
 
-    let rankText = "near this region's typical seasonal conditions";
+    let rankText = "moderate vegetation conditions";
+
+    if (cell.value > avg + 0.01)
+      rankText = `relatively green conditions in ${REGION_LABEL[cell.region]}`;
+
+    if (cell.value < avg - 0.01)
+      rankText = `relatively dry conditions in ${REGION_LABEL[cell.region]}`;
 
     if (cell.value === max)
       rankText = `greenest conditions in ${REGION_LABEL[cell.region]}`;
 
     if (cell.value === min)
       rankText = `driest conditions in ${REGION_LABEL[cell.region]}`;
+
     
     const avgText = cell.value >= avg
       ? `${(cell.value - avg).toFixed(4)} above this region's average`
