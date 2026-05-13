@@ -58,6 +58,9 @@ python3 artifacts/data_explorer.py     # rebuilds data/manifest.json
 | **Greenness overlay** | Toggle a 60×50 binned-color heatmap. | Reveals where greenness concentrates spatially. |
 | **Region rectangles** | Toggle bbox outlines for Sierra/Valley/SoCal. | Makes the abstract "Region" filter concrete on the image. |
 | **Annotations** | Vertical bands marking 2023 atmospheric-river winter and 2024 late-season dryness. | Narrative anchoring. |
+| **Regional heatmap** | Shows region × date greenness as a compact color grid. | Makes seasonal and wet/dry patterns scannable across all regions at once. |
+| **Hover heatmap cell** | Shows exact greenness value, region rank (how green/brown and dry a certain image or date is for the region), difference from that region’s average, and change from the previous date. | Shows contextual statistics that color alone cannot show. |
+| **Click heatmap cell** | Jumps to the selected image/date, updates the active region, redraws the chart, and scrolls back to the image view. | Connects our visualizations and imagery together.|
 
 ## What the numbers mean (and what they aren't)
 
