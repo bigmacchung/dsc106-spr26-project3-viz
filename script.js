@@ -967,6 +967,10 @@
         renderAll();
         drawChart();
         drawHeatmap();
+        document.querySelector(".stage-row").scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
       }
     });
 
