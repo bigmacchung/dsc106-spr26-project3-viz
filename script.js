@@ -760,6 +760,50 @@
     }
   }
   
+  // Heatmap Tooltip Insight Generator — produces the text for the tooltip when 
+  // hovering heatmap cells in the grid view. Provides context on how the hovered 
+  // cell's value compares to other dates in the same region, and how it has 
+  // changed from the previous date.
+  function heatmapInsight(cell) {
+    const regionRecords = state.records.map(r => {
+      const stats = cell.region === "all" ? r.all : r.regions[cell.region];
+      return {
+        date: r.date,
+        value: stats.greenness
+      };
+    });
+
+    const values = regionRecords.map(d => d.value);
+    const avg = d3.mean(values);
+    const max = d3.max(values);
+    const min = d3.min(values);
+
+    const idx = regionRecords.findIndex(d => d.date === cell.date);
+    const prev = idx > 0 ? regionRecords[idx - 1] : null;
+    const change = prev ? cell.value - prev.value : null;
+
+    let rankText = "middle of this region's range";
+    if (cell.value === max) rankText = "greenest date for this region";
+    if (cell.value === min) rankText = "driest/brownest date for this region";
+
+    const avgText = cell.value >= avg
+      ? `${(cell.value - avg).toFixed(4)} above this region's average`
+      : `${(avg - cell.value).toFixed(4)} below this region's average`;
+
+    const changeText = change == null
+      ? "no previous date to compare"
+      : `${change >= 0 ? "+" : ""}${change.toFixed(4)} from previous date`;
+
+    return { rankText, avgText, changeText };
+}
+
+  // Heatmap rendering function — draws the heatmap in the grid view, 
+  // showing the "greenness" measure for each date and region. 
+  // Each cell's color is determined by its value relative to the range of 
+  // values for that region, with a tooltip providing insights on how that 
+  // value compares to other dates in the same region and how it has changed 
+  // from the previous date.
+
   function drawHeatmap() {
 
     const svg = d3.select("#heatmap");
@@ -837,15 +881,94 @@
     });
 
     g.selectAll("rect")
-      .data(cells)
-      .enter()
-      .append("rect")
-      .attr("x", d => x(d.date))
-      .attr("y", d => y(d.region))
-      .attr("width", x.bandwidth())
-      .attr("height", y.bandwidth())
-      .attr("rx", 4)
-      .attr("fill", d => color(d.value));
+    .data(cells)
+    .enter()
+    .append("rect")
+    .attr("x", d => x(d.date))
+    .attr("y", d => y(d.region))
+    .attr("width", x.bandwidth())
+    .attr("height", y.bandwidth())
+    .attr("rx", 4)
+    .attr("fill", d => color(d.value))
+    .style("cursor", "pointer")
+
+    .on("mousemove", function(ev, d) {
+
+      const insight = heatmapInsight(d);
+
+      d3.select(this)
+        .attr("stroke", "#1A1A17")
+        .attr("stroke-width", 2);
+
+      d3.select("#tt")
+        .style("left", (ev.clientX + 14) + "px")
+        .style("top", (ev.clientY + 14) + "px")
+        .html(`
+          <div><strong>${REGION_LABEL[d.region]}</strong></div>
+
+          <div>
+            ${d3.timeFormat("%b %Y")(new Date(d.date + "T00:00:00"))}
+          </div>
+
+          <hr style="border:0;border-top:1px solid rgba(255,255,255,0.25);margin:6px 0;">
+
+          <div class="tt-row">
+            <span>Greenness</span>
+            <strong>${d.value >= 0 ? "+" : ""}${d.value.toFixed(4)}</strong>
+          </div>
+
+          <div class="tt-row">
+            <span>Region rank</span>
+            <strong>${insight.rankText}</strong>
+          </div>
+
+          <div class="tt-row">
+            <span>Vs. region avg</span>
+            <strong>${insight.avgText}</strong>
+          </div>
+
+          <div class="tt-row">
+            <span>Change from previous</span>
+            <strong>${insight.changeText}</strong>
+          </div>
+
+          <div style="margin-top:6px;opacity:0.8;">
+            Click to jump to this image and region.
+          </div>
+        `)
+        .attr("hidden", null);
+    })
+
+    .on("mouseleave", function() {
+
+      d3.select(this)
+        .attr("stroke", null)
+        .attr("stroke-width", null);
+
+      d3.select("#tt")
+        .attr("hidden", true);
+    })
+
+    .on("click", function(ev, d) {
+
+      const fIdx = state.filtered.findIndex(r => r.date === d.date);
+
+      if (fIdx >= 0) {
+
+        state.idx = fIdx;
+        state.region = d.region;
+
+        el("date-slider").value = fIdx;
+
+        document.querySelectorAll("#region-chips .chip").forEach(c =>
+          c.classList.toggle("active", c.dataset.region === d.region)
+        );
+
+        renderAll();
+        drawChart();
+        drawHeatmap();
+      }
+    });
 
     g.append("g")
       .call(
