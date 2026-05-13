@@ -121,6 +121,19 @@ code {
 #date-slider { flex: 1 1 360px; accent-color: var(--accent); height: 4px; cursor: pointer; }
 .readout { font-variant-numeric: tabular-nums; font-size: 13px; color: var(--ink); font-weight: 600; min-width: 220px; }
 
+/* ============================== STORY HINT ============================== */
+.story-hint {
+  margin: 0 0 14px;
+  padding: 12px 16px;
+  border-left: 3px solid var(--accent-2);
+  background: #FFF8EC;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+  border-radius: 0 8px 8px 0;
+}
+.story-hint strong { color: var(--accent-2); }
+
 /* ============================== STAGE ============================== */
 .stage-row {
   display: grid;
@@ -395,13 +408,7 @@ code {
   max-width: 240px;
   z-index: 50;
 }
-.tooltip .tt-row {  
-  display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 12px;
-  align-items: start;
-  margin: 5px 0;
-}
+.tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; }
 .tooltip .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
 
 /* ============================== WRITEUP ============================== */

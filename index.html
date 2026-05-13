@@ -36,8 +36,8 @@
     <div class="row">
 
       <div class="seg" role="tablist" aria-label="View mode">
-        <button class="active" data-mode="single"  aria-pressed="true">Single</button>
-        <button             data-mode="compare" aria-pressed="false">Compare</button>
+        <button             data-mode="single"  aria-pressed="false">Single</button>
+        <button class="active" data-mode="compare" aria-pressed="true">Compare</button>
         <button             data-mode="grid"    aria-pressed="false">Grid (all 8)</button>
       </div>
 
@@ -95,8 +95,14 @@
   <!-- =========================================================
        STAGE
        ========================================================= -->
+  <p class="story-hint" id="story-hint">
+    <strong>What you're looking at on load:</strong>
+    Jan 1, 2023 (wet atmospheric-river winter, left) vs Jan 1, 2024 (dry winter, right).
+    Sierra greenness fell from <strong>+0.0004</strong> to <strong>−0.0345</strong> in one year — visible by eye. Use the slider to explore the rest.
+  </p>
+
   <section class="stage-row">
-    <div id="stage" class="stage" data-mode="single">
+    <div id="stage" class="stage" data-mode="compare">
 
       <!-- Single + Compare frames -->
       <figure id="frame-a" class="frame">
@@ -178,31 +184,6 @@
     </p>
   </section>
 
-  <section class="chart-card heatmap-card">
-
-  <div class="chart-header">
-    <div>
-      <h2 class="chart-title">
-        Regional Greenness Heatmap
-      </h2>
-
-      <p class="chart-sub">
-        A compact comparison of vegetation greenness across California regions and dates.
-      </p>
-    </div>
-  </div>
-
-  <svg id="heatmap" viewBox="0 0 960 500" preserveAspectRatio="xMidYMid meet"></svg>
-
-  <p class="chart-foot">
-    Brown cells indicate drier / more negative greenness proxy values,
-    while greener cells indicate stronger visible vegetation signals.
-  </p>
-
-</section>
-  <!-- <svg id="heatmap" width="900" height="500"></svg>
- -->
-
   <!-- =========================================================
        WRITEUP
        ========================================================= -->
@@ -215,7 +196,6 @@
       <li><strong>Region click filtering.</strong> The "Region" chips and the colored region rectangles on the image both filter the chart to one ecoregion. Sierra Nevada's swing from Jan 2023 (+0.0004) to Jan 2024 (−0.0345) appears immediately — a wet-winter / dry-winter contrast a single line can't isolate.</li>
       <li><strong>Magnifier lens on the image.</strong> Pixel-level inspection of a 1200×1000 satellite tile is impossible in a static plot; the lens reveals snowpack texture in Sierra and farm-block patterns in the Central Valley you can't see at thumbnail size.</li>
       <li><strong>Greenness overlay (binned color).</strong> Toggling the overlay re-projects the image into a 60×50 grid of binned greenness values, exposing where in the state the change concentrates (e.g. Central Valley Apr 2024 spike).</li>
-      <li><strong>Interactive heatmap with details-on-demand via tooltip.</strong> The heatmap compresses all regions and dates into a single comparative view. The interaction with our heatmap reveals information that is difficult to infer from color alone: hovering a cell displays the exact greenness proxy, whether that date is the region’s greenest or driest observation, how far it is from the region’s average, and how much it changed from the previous date. Clicking a cell synchronizes the rest of the dashboard — updating the active image, region filter, and line chart simultaneously. This coordinated interaction transforms the heatmap from a static summary into an exploratory analysis tool.</strong></li>
     </ul>
 
     <h2>Design rationale</h2>
@@ -227,13 +207,6 @@
 
     <p><strong>Annotations.</strong> Two narrative bands mark events the imagery actually shows: Jan 2023's atmospheric-river winter (Sierra greenness anomalously high) and Jul–Oct 2024's late-season dryness (statewide negative greenness). They're rendered as labeled vertical bands behind the chart, fading to transparent so they don't compete with the data lines.</p>
 
-    <h2>Development Process</h2>
-    <p><strong>Brainstorming/Exploratory.</strong> During this process, the team collaboratively came up with various ideas and ways to attempt to answer the following main question: how is  California’s vegetation levels changing over time? We’ve used this stage of the development process to bounce ideas off each other and to explore which types of visualization are suitable to answer the question. This resulted in us planning to integrate tracking California’s vegetation levels across different regions (Sierra Nevada, Southern California, Central Valley).</p>
-
-    <p><strong>Ways of data exploration.</strong> Analyzed visualizations of California and its regions under different types of layers via the website. Overlaid filters, such as NVDI for vegetation. Created various graphs based on California’s vegetation level to highlight and explore any possible trends and correlations with seasonal and time changes.</p> 
-
-    <p><strong>Implementation.</strong></p> Based on the data exploration, the group integrated each of our ideas into the chosen visualizations and design rationales made. Each visualization is an addition to the others' ideas or a combination of ideas integrated as one product. This was the hardest part of the development stage since we had to ensure everyone's ideas were heard and considered to be a part of the final webpage. Overall, the group has roughly spent at least +2 hours each day in a span of a couple of days during the whole development process. Fortunately, the group proved to be excellent in communication with each other regarding what to implement and what work was needed to be done. Everyone took a part in ensuring they contributed to each of the parts of the project where it may have been needed and/or ideas could be implemented further.</p>
-    
     <h2>Data source &amp; license</h2>
     <p>All imagery: NASA EOSDIS Global Imagery Browse Services
     (<a href="https://gibs.earthdata.nasa.gov" target="_blank" rel="noopener">GIBS</a>),
