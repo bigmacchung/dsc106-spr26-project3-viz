@@ -395,7 +395,13 @@ code {
   max-width: 240px;
   z-index: 50;
 }
-.tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; }
+.tooltip .tt-row {  
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 12px;
+  align-items: start;
+  margin: 5px 0;
+}
 .tooltip .swatch { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
 
 /* ============================== WRITEUP ============================== */
