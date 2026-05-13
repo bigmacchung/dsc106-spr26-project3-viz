@@ -187,12 +187,27 @@
   <!-- =========================================================
        WRITEUP
        ========================================================= -->
-  <section class="chart-card" aria-labelledby="heatmap-title">
-    <h2 id="heatmap-title">Greenness heatmap by date and region</h2>
-    <p class="chart-sub">
-      Each cell shows the greenness proxy for one date and one region. Hover to compare that cell with the region average and previous date.
+  <section class="chart-card heatmap-card">
+
+    <div class="chart-header">
+      <div>
+        <h2 class="chart-title">
+          Regional Greenness Heatmap
+        </h2>
+
+        <p class="chart-sub">
+          A compact comparison of vegetation greenness across California regions and dates.
+        </p>
+      </div>
+    </div>
+
+    <svg id="heatmap" viewBox="0 0 960 500" preserveAspectRatio="xMidYMid meet"></svg>
+
+    <p class="chart-foot">
+      Brown cells indicate drier / more negative greenness proxy values,
+      while greener cells indicate stronger visible vegetation signals.
     </p>
-    <svg id="heatmap" viewBox="0 0 960 500" role="img" aria-label="Heatmap of greenness by date and region"></svg>
+
   </section>
 
   <section class="writeup">
