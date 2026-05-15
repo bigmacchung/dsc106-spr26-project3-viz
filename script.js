@@ -186,10 +186,10 @@
       renderAll();
     });
 
-    bindChipGroup("region-chips", "region", () => { drawChart(); updateDetails(); });
+    bindChipGroup("region-chips", "region", () => { drawChart(); drawHeatmap(); updateDetails(); });
     bindChipGroup("measure-chips", "measure", () => { drawChart(); updateDetails(); });
-    bindChipGroup("season-chips", "season", () => { applyFilters(); renderAll(); drawChart(); });
-    bindChipGroup("year-chips",   "year",   () => { applyFilters(); renderAll(); drawChart(); });
+    bindChipGroup("season-chips", "season", () => { applyFilters(); renderAll(); drawChart(); drawHeatmap(); });
+    bindChipGroup("year-chips",   "year",   () => { applyFilters(); renderAll(); drawChart(); drawHeatmap(); });
     // layer chip group is rebuilt each render — bind via delegation
     el("layer-chips").addEventListener("click", e => {
       const b = e.target.closest("button.chip"); if (!b) return;
@@ -200,7 +200,7 @@
 
     const onSlide = rafThrottle(() => {
       state.idx = +el("date-slider").value;
-      renderAll(); drawChart();
+      renderAll(); drawChart(); drawHeatmap();
     });
     el("date-slider").addEventListener("input", onSlide, { passive: true });
 
@@ -753,10 +753,11 @@
       brushG.call(brush.move, [x(state.brushRange[0]), x(state.brushRange[1])]);
     }
     function brushed(ev) {
-      if (!ev.selection) { state.brushRange = null; buildGridView(); return; }
+      if (!ev.selection) { state.brushRange = null; buildGridView(); drawHeatmap(); return; }
       const [a, b] = ev.selection;
       state.brushRange = [x.invert(a), x.invert(b)];
       buildGridView();
+      drawHeatmap();
     }
   }
   
@@ -823,10 +824,10 @@
 
     svg.selectAll("*").remove();
 
-    const margin = { top: 40, right: 20, bottom: 70, left: 130 };
+    const margin = { top: 56, right: 20, bottom: 110, left: 130 };
 
     const width = 960 - margin.left - margin.right;
-    const height = 500 - margin.top - margin.bottom;
+    const height = 540 - margin.top - margin.bottom;
 
     const g = svg.append("g")
       .attr("transform", `translate(${margin.left},${margin.top})`);
@@ -891,16 +892,27 @@
       });
     });
 
-    g.selectAll("rect")
+    // Helpers for linked highlighting
+    const activeDate   = state.filtered[state.idx]?.date;
+    const activeRegion = state.region;
+    const brushedDate  = (d) => {
+      if (!state.brushRange) return true;
+      const t = +new Date(d);
+      return t >= +state.brushRange[0] && t <= +state.brushRange[1];
+    };
+
+    g.selectAll("rect.cell")
     .data(cells)
     .enter()
     .append("rect")
+    .attr("class", "cell")
     .attr("x", d => x(d.date))
     .attr("y", d => y(d.region))
     .attr("width", x.bandwidth())
     .attr("height", y.bandwidth())
     .attr("rx", 4)
     .attr("fill", d => color(d.value))
+    .attr("opacity", d => brushedDate(d.date) ? 1 : 0.32)
     .style("cursor", "pointer")
 
     .on("mousemove", function(ev, d) {
@@ -1002,6 +1014,74 @@
       .selectAll("text")
       .attr("transform", "rotate(-30)")
       .style("text-anchor", "end");
+
+    // ---- Linked crosshair: active date column + active region row ----
+    if (activeDate && x.domain().includes(activeDate)) {
+      g.append("rect").attr("class","hm-col-hl")
+        .attr("x", x(activeDate) - 2).attr("y", -4)
+        .attr("width", x.bandwidth() + 4).attr("height", height + 8)
+        .attr("fill", "none").attr("stroke", "#1A1A17").attr("stroke-width", 2).attr("rx", 6)
+        .attr("pointer-events", "none");
+    }
+    if (activeRegion && y.domain().includes(activeRegion)) {
+      g.append("rect").attr("class","hm-row-hl")
+        .attr("x", -4).attr("y", y(activeRegion) - 2)
+        .attr("width", width + 8).attr("height", y.bandwidth() + 4)
+        .attr("fill", "none").attr("stroke", "#1A1A17").attr("stroke-width", 2).attr("rx", 6)
+        .attr("pointer-events", "none");
+    }
+
+    // ---- Headline callout: Sierra winter wet→dry contrast ----
+    if (y.domain().includes("sierra") &&
+        x.domain().includes("2023-01-01") &&
+        x.domain().includes("2024-01-01")) {
+      const x0 = x("2023-01-01") + x.bandwidth() / 2;
+      const x1 = x("2024-01-01") + x.bandwidth() / 2;
+      const yy = y("sierra") - 10;
+      const arrowG = g.append("g").attr("class", "hm-callout").attr("pointer-events","none");
+      arrowG.append("path")
+        .attr("d", `M${x0} ${yy} Q ${(x0+x1)/2} ${yy - 22}, ${x1} ${yy}`)
+        .attr("fill", "none").attr("stroke", "#B45309").attr("stroke-width", 1.4)
+        .attr("stroke-dasharray", "3 2");
+      // arrowhead
+      arrowG.append("path")
+        .attr("d", `M${x1} ${yy} l -5 -3 l 1 5 z`)
+        .attr("fill", "#B45309");
+      arrowG.append("text")
+        .attr("x", (x0+x1)/2).attr("y", yy - 26)
+        .attr("text-anchor","middle")
+        .attr("font-size", 11).attr("font-weight", 700).attr("fill", "#B45309")
+        .text("+0.0004 → −0.0345 in one year");
+    }
+
+    // ---- Color legend strip under the heatmap ----
+    const legendW = 220, legendH = 10;
+    const legendX = width - legendW;
+    const legendY = height + 46;
+    const legend = g.append("g").attr("class", "hm-legend");
+    const defs = svg.append("defs");
+    const grad = defs.append("linearGradient")
+      .attr("id", "hm-grad").attr("x1", "0%").attr("x2", "100%");
+    grad.append("stop").attr("offset", "0%").attr("stop-color", "#7B3F00");
+    grad.append("stop").attr("offset", "50%").attr("stop-color", "#F3E8C8");
+    grad.append("stop").attr("offset", "100%").attr("stop-color", "#064E3B");
+    legend.append("rect")
+      .attr("x", legendX).attr("y", legendY)
+      .attr("width", legendW).attr("height", legendH)
+      .attr("rx", 3).attr("fill", "url(#hm-grad)");
+    legend.append("text")
+      .attr("x", legendX).attr("y", legendY - 4)
+      .attr("font-size", 10.5).attr("fill", "#6B6962")
+      .text("Greenness proxy");
+    [["−0.04", legendX],
+     ["0", legendX + legendW / 2],
+     ["+0.04", legendX + legendW]].forEach(([t, xp]) => {
+      legend.append("text")
+        .attr("x", xp).attr("y", legendY + legendH + 12)
+        .attr("text-anchor", xp === legendX ? "start" : xp === legendX + legendW ? "end" : "middle")
+        .attr("font-size", 10.5).attr("fill", "#6B6962")
+        .text(t);
+    });
   }
   // ---------------------------------------------------------------- helpers
   function cap(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
